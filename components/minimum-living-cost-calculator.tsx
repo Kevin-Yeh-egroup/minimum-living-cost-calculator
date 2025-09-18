@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Calculator, Users, MapPin, Info } from "lucide-react"
+import { Calculator, Users, MapPin, Info, Edit3 } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 
 // 最低生活費資料
@@ -58,19 +58,27 @@ const regionGroups = {
 
 export function MinimumLivingCostCalculator() {
   const [selectedRegion, setSelectedRegion] = useState<string>("")
+  const [customRegion, setCustomRegion] = useState<string>("")
+  const [useCustomRegion, setUseCustomRegion] = useState<boolean>(false)
   const [householdSize, setHouseholdSize] = useState<string>("")
   const [result, setResult] = useState<number | null>(null)
 
   const handleCalculate = () => {
-    if (!selectedRegion || !householdSize) return
+    const currentRegion = useCustomRegion ? customRegion : selectedRegion
+    if (!currentRegion || !householdSize) return
 
-    const costPerPerson = livingCostData[selectedRegion as keyof typeof livingCostData]
+    // 如果是自定義地區，使用預設費用（台北市標準）
+    const costPerPerson = useCustomRegion 
+      ? livingCostData["台北市"] 
+      : livingCostData[currentRegion as keyof typeof livingCostData]
     const totalCost = costPerPerson * Number.parseInt(householdSize)
     setResult(totalCost)
   }
 
   const handleReset = () => {
     setSelectedRegion("")
+    setCustomRegion("")
+    setUseCustomRegion(false)
     setHouseholdSize("")
     setResult(null)
   }
@@ -88,53 +96,129 @@ export function MinimumLivingCostCalculator() {
         </CardHeader>
         <CardContent className="space-y-6 pt-6">
           {/* 地區選擇 */}
-          <div className="space-y-2">
+          <div className="space-y-3">
             <Label htmlFor="region" className="flex items-center gap-2 text-base font-medium">
               <MapPin className="h-4 w-4 text-primary" />
               居住地區
             </Label>
-            <Select value={selectedRegion} onValueChange={setSelectedRegion}>
-              <SelectTrigger className="h-12">
-                <SelectValue placeholder="請選擇您的居住縣市" />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.entries(regionGroups).map(([groupName, regions]) => (
-                  <div key={groupName}>
-                    <div className="px-2 py-1.5 text-sm font-semibold text-muted-foreground">{groupName}</div>
-                    {regions.map((region) => (
-                      <SelectItem key={region} value={region}>
-                        {region}
-                      </SelectItem>
-                    ))}
-                  </div>
-                ))}
-              </SelectContent>
-            </Select>
+            
+            {/* 切換按鈕 */}
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant={!useCustomRegion ? "default" : "outline"}
+                size="sm"
+                onClick={() => {
+                  setUseCustomRegion(false)
+                  setCustomRegion("")
+                }}
+                className="h-8"
+              >
+                選擇縣市
+              </Button>
+              <Button
+                type="button"
+                variant={useCustomRegion ? "default" : "outline"}
+                size="sm"
+                onClick={() => {
+                  setUseCustomRegion(true)
+                  setSelectedRegion("")
+                }}
+                className="h-8"
+              >
+                <Edit3 className="h-3 w-3 mr-1" />
+                手動輸入
+              </Button>
+            </div>
+
+            {/* 下拉選單 */}
+            {!useCustomRegion && (
+              <Select value={selectedRegion} onValueChange={setSelectedRegion}>
+                <SelectTrigger className="h-12">
+                  <SelectValue placeholder="請選擇您的居住縣市" />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(regionGroups).map(([groupName, regions]) => (
+                    <div key={groupName}>
+                      <div className="px-2 py-1.5 text-sm font-semibold text-muted-foreground">{groupName}</div>
+                      {regions.map((region) => (
+                        <SelectItem key={region} value={region}>
+                          {region}
+                        </SelectItem>
+                      ))}
+                    </div>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+
+            {/* 手動輸入框 */}
+            {useCustomRegion && (
+              <div className="space-y-2">
+                <Input
+                  id="custom-region"
+                  type="text"
+                  value={customRegion}
+                  onChange={(e) => setCustomRegion(e.target.value)}
+                  placeholder="請輸入居住地區（例如：台北市、新竹縣等）"
+                  className="h-12 text-lg"
+                />
+                <p className="text-xs text-muted-foreground">
+                  ⚠️ 手動輸入的地區將使用台北市標準（NT$ 20,379/人/月）進行計算
+                </p>
+              </div>
+            )}
           </div>
 
-          {/* 家庭人數輸入 */}
-          <div className="space-y-2">
+          {/* 家庭人數選擇 */}
+          <div className="space-y-3">
             <Label htmlFor="household-size" className="flex items-center gap-2 text-base font-medium">
               <Users className="h-4 w-4 text-primary" />
               家庭成員數量
             </Label>
-            <Input
-              id="household-size"
-              type="number"
-              min="1"
-              max="20"
-              value={householdSize}
-              onChange={(e) => setHouseholdSize(e.target.value)}
-              placeholder="請輸入家庭成員數量"
-              className="h-12 text-lg"
-            />
+            
+            {/* 下拉選單 */}
+            <Select value={householdSize} onValueChange={setHouseholdSize}>
+              <SelectTrigger className="h-12">
+                <SelectValue placeholder="請選擇家庭成員數量" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="1">1 人</SelectItem>
+                <SelectItem value="2">2 人</SelectItem>
+                <SelectItem value="3">3 人</SelectItem>
+                <SelectItem value="4">4 人</SelectItem>
+                <SelectItem value="5">5 人</SelectItem>
+                <SelectItem value="6">6 人</SelectItem>
+                <SelectItem value="7">7 人</SelectItem>
+                <SelectItem value="8">8 人</SelectItem>
+                <SelectItem value="9">9 人</SelectItem>
+                <SelectItem value="10">10 人</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* 手動輸入框 */}
+            <div className="space-y-2">
+              <Label htmlFor="custom-household-size" className="text-sm text-muted-foreground">
+                或直接輸入人數：
+              </Label>
+              <Input
+                id="custom-household-size"
+                type="number"
+                min="1"
+                max="50"
+                value={householdSize}
+                onChange={(e) => setHouseholdSize(e.target.value)}
+                placeholder="輸入家庭成員數量"
+                className="h-10"
+              />
+            </div>
           </div>
 
           {/* 按鈕區域 */}
           <div className="flex gap-3 pt-4">
             <Button
               onClick={handleCalculate}
-              disabled={!selectedRegion || !householdSize}
+              disabled={(!selectedRegion && !customRegion) || !householdSize}
               className="flex-1 h-12 text-lg"
             >
               <Calculator className="h-5 w-5 mr-2" />
@@ -157,7 +241,7 @@ export function MinimumLivingCostCalculator() {
             <div className="text-center space-y-4">
               <div className="space-y-2">
                 <p className="text-lg text-muted-foreground">
-                  {selectedRegion} · {householdSize} 人家庭
+                  {useCustomRegion ? customRegion : selectedRegion} · {householdSize} 人家庭
                 </p>
                 <div className="text-5xl font-bold text-primary">NT$ {result.toLocaleString()}</div>
                 <p className="text-lg text-muted-foreground">每月最低生活費</p>
@@ -166,10 +250,18 @@ export function MinimumLivingCostCalculator() {
               <div className="bg-muted/50 rounded-lg p-4 space-y-2">
                 <p className="text-sm text-muted-foreground">計算方式：</p>
                 <p className="text-base">
-                  NT$ {livingCostData[selectedRegion as keyof typeof livingCostData].toLocaleString()}
+                  NT$ {(useCustomRegion 
+                    ? livingCostData["台北市"] 
+                    : livingCostData[selectedRegion as keyof typeof livingCostData]
+                  ).toLocaleString()}
                   <span className="text-muted-foreground"> (每人每月) </span>× {householdSize} 人 =
                   <span className="font-semibold text-primary"> NT$ {result.toLocaleString()}</span>
                 </p>
+                {useCustomRegion && (
+                  <p className="text-xs text-amber-600">
+                    ⚠️ 自定義地區使用台北市標準進行計算
+                  </p>
+                )}
               </div>
             </div>
           </CardContent>
